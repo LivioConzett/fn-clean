@@ -9,6 +9,10 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include "main.h"
 
 
@@ -23,6 +27,7 @@ static void print_help(){
     printf("-----------------\n");
     printf("     -h  show this help screen\n");
     printf("     -t  test. Don't overwrite the filenames. Only print them out.\n");
+    printf("     -v  verbose. Print what is going on\n");
     printf("<files>  files whose name to clean\n");
     printf("\n");
 }
@@ -187,10 +192,21 @@ int main(int argc, char *argv[]){
 
     // go through the files
     for(int i = 0; i < file_list_counter; i++){
+
         // printf("%s\n", file_list[i]);
 
         char* file = file_list[i];
         uint16_t file_length = strlen(file);
+
+
+        // check if the file is a file
+        struct stat path_stat;
+        stat(file, &path_stat);
+        
+        if(!S_ISREG(path_stat.st_mode)){
+            fprintf(stderr,"%s is not a file\n",file);
+            continue;
+        }
 
         // get the directory from the file chooser
         char root_dir[file_length];
@@ -203,9 +219,59 @@ int main(int argc, char *argv[]){
 
         replace_chars(file_length, filename, new_filename);
 
-        printf("%s -> %s%s%s\n",file, root_dir, new_filename, extension);
+        // + 10 because it could have gotten the ./ added and
+        // copy counter that could be added.
+        char new_file[file_length + 10];
 
-        
+        strcpy(new_file, root_dir);
+        strcat(new_file, new_filename);
+        strcat(new_file, extension);
+
+
+        // check if the file already exists
+        uint8_t copy_counter = 1;
+        uint8_t file_ok = 1;
+
+        if(access(new_file, F_OK) == 0){
+            fprintf(stderr,"DUPLICATE %s \n", new_file);
+            file_ok = 0;
+        }
+
+
+        // Try to find a file that can be written by adding numbers behind the filename.
+        while(!file_ok){
+
+            char copy_file[file_length + 10];
+            char counter_string[5];
+            sprintf(counter_string, "%d", copy_counter);
+
+            strcpy(copy_file, root_dir);
+            strcat(copy_file, new_filename);
+            strcat(copy_file, "_");
+            strcat(copy_file, counter_string);
+            strcat(copy_file, extension);
+
+            printf("%s\n", copy_file);
+
+            if(access(copy_file, F_OK) != 0){
+                file_ok = 1;
+                strcpy(new_file, copy_file);
+            }
+
+            if(copy_counter >= 255){
+                fprintf(stderr, "too many duplicates\n");
+                return 0;
+            }
+
+            copy_counter++;
+        }
+
+        // printf("%s -> %s%s%s\n",file, root_dir, new_filename, extension);
+        printf("%s -> %s\n", file, new_file);
+
+        if(!test_param){
+            rename(file, new_file);
+        }
 
     }
 

@@ -62,3 +62,4 @@ dkms.conf
 
 # test folder for files
 test/
+test_copy/
