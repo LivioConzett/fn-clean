@@ -56,3 +56,9 @@ dkms.conf
 
 # c-lion things
 .idea/
+
+# vscode stuff
+.vscode
+
+# test folder for files
+test/
