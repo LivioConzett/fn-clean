@@ -150,6 +150,7 @@ int main(int argc, char *argv[]){
 
     // Only testing. Don't overwrite the filenames. Only print them out.
     uint8_t test_param = 0;
+    uint8_t verbose_param = 0;
     // pointer to the string for the file chooser
     char *file_list[argc];
 
@@ -170,6 +171,10 @@ int main(int argc, char *argv[]){
                 // set the test param
                 case 't':
                     test_param = 1;
+                    break;
+                // set the verbose param
+                case 'v':
+                    verbose_param = 1;
                     break;
 
                 default:
@@ -204,7 +209,7 @@ int main(int argc, char *argv[]){
         stat(file, &path_stat);
         
         if(!S_ISREG(path_stat.st_mode)){
-            fprintf(stderr,"%s is not a file\n",file);
+            if(verbose_param) fprintf(stderr,"%s is not a file\n",file);
             continue;
         }
 
@@ -233,7 +238,7 @@ int main(int argc, char *argv[]){
         uint8_t file_ok = 1;
 
         if(access(new_file, F_OK) == 0){
-            fprintf(stderr,"DUPLICATE %s \n", new_file);
+            if(verbose_param) fprintf(stderr,"DUPLICATE %s \n", new_file);
             file_ok = 0;
         }
 
@@ -251,7 +256,7 @@ int main(int argc, char *argv[]){
             strcat(copy_file, counter_string);
             strcat(copy_file, extension);
 
-            printf("%s\n", copy_file);
+            if(verbose_param) printf("  copy: %d\n", copy_counter);
 
             if(access(copy_file, F_OK) != 0){
                 file_ok = 1;
@@ -266,8 +271,7 @@ int main(int argc, char *argv[]){
             copy_counter++;
         }
 
-        // printf("%s -> %s%s%s\n",file, root_dir, new_filename, extension);
-        printf("%s -> %s\n", file, new_file);
+        if(verbose_param || test_param) printf("%s -> %s\n", file, new_file);
 
         if(!test_param){
             rename(file, new_file);
