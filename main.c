@@ -18,9 +18,6 @@
 
 #define MAX_FILENAME_LENGTH 512
 
-static const char ALLOWED_CHARS[] = {"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+:"};
-static const uint8_t ALLOWED_CHARS_LENGTH = 70;
-
 // struct for replacement
 typedef struct replacement_d{
     char in[4];
@@ -102,7 +99,22 @@ replacement_t replacements[] = {
     {":",":",1},
 
     {"ä","ae",2},
-    {"ö","oe",2}
+    {"ö","oe",2},
+    {"ü","ue",2},
+    {"Ä","AE",2},
+    {"Ö","OE",2},
+    {"Ü","UE",2},
+
+    {"é","e",2},
+    {"è","e",2},
+    {"ẽ","e",2},
+    {"à","a",2},
+    {"É","E",2},
+    {"È","E",2},
+    {"Ẽ","E",2},
+    {"À","A",2},
+
+    {"@","-at-",4}
 };
 
 uint16_t REPLACEMENTS_LENGTH = sizeof(replacements) / sizeof(replacement_t);
@@ -216,20 +228,6 @@ static void split_file_path(uint16_t length, char *filepath, char *directory, ch
 
 }
 
-/**
- * @brief checks if a character is safe or not
- * @param c character to check
- * @return 1 if c is safe, else 0
- */
-static uint8_t char_is_safe(char c){
-
-    for(uint8_t i = 0; i < ALLOWED_CHARS_LENGTH; i++){
-        if(ALLOWED_CHARS[i] == c) return 1;
-    }
-
-    return 0;
-}
-
 
 /**
  * @brief append str2 to the end of str1
@@ -298,7 +296,6 @@ static void replace_chars(uint16_t length, char *in, char *out){
     // fprintf(stderr,"%d %s %s\n", length, in, out);
 
     uint16_t i_in = 0;
-    uint16_t i_out = 0;
     char str[4];
 
 
@@ -404,7 +401,6 @@ int main(int argc, char *argv[]){
         // printf("%s\n", file_list[i]);
 
         char* file = file_list[i];
-        uint16_t file_length = strlen(file);
 
 
         // check if the file is a file
@@ -431,14 +427,16 @@ int main(int argc, char *argv[]){
 
         replace_chars(MAX_FILENAME_LENGTH, filename, new_filename);
 
-        // + 10 because it could have gotten the ./ added and
-        // copy counter that could be added.
         char new_file[MAX_FILENAME_LENGTH];
 
         strcpy(new_file, root_dir);
         strcat(new_file, new_filename);
         strcat(new_file, extension);
 
+
+        // if the clean filename is the same as the filename before cleaning,
+        // do nothing, because nothing changed.
+        if(string_compare(file, new_file)) continue;
 
         // check if the file already exists
         uint8_t copy_counter = 1;
