@@ -314,13 +314,19 @@ static void replace_chars(uint16_t length, char *in, char *out){
 
         // fprintf(stderr, "%s\n", str);
 
+        uint8_t replaced = 0;
 
         for(uint16_t r = 0; r < REPLACEMENTS_LENGTH; r++){
 
             if(string_compare(str, replacements[r].in)){
                 string_append(out, replacements[r].out);
+                replaced = 1;
                 break;
             }
+        }
+
+        if(!replaced){
+            string_append(out,"_");
         }
         
         // advance the counter by the amount of bytes in the utf-8 char
