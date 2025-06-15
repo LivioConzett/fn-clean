@@ -170,10 +170,12 @@ static void split_file_path(uint16_t length, char *filepath, char *directory, ch
     uint16_t filename_counter = 0;
     uint16_t directory_counter = 0;
     uint16_t extension_counter = 0;
+    uint16_t i = 0;
 
-    for(uint16_t i = 0; i < length; i++){
+    while(filepath[i] != 0){
         if(filepath[i] == '/') slash_amount++;
         if(filepath[i] == '.') dot_amount++;
+        i++;
     }
 
     // Go through the filepath. Push everything into the directory buffer
@@ -415,20 +417,23 @@ int main(int argc, char *argv[]){
         }
 
         // get the directory from the file chooser
-        char root_dir[file_length];
-        char filename[file_length];
-        char extension[file_length];
+        char root_dir[MAX_FILENAME_LENGTH];
+        root_dir[0] = 0;
+        char filename[MAX_FILENAME_LENGTH];
+        filename[0] = 0;
+        char extension[MAX_FILENAME_LENGTH];
+        extension[0] = 0;
 
-        split_file_path(file_length, file, root_dir, filename, extension);
+        split_file_path(MAX_FILENAME_LENGTH, file, root_dir, filename, extension);
 
-        char new_filename[file_length];
+        char new_filename[MAX_FILENAME_LENGTH];
         new_filename[0] = 0;
 
-        replace_chars(file_length, filename, new_filename);
+        replace_chars(MAX_FILENAME_LENGTH, filename, new_filename);
 
         // + 10 because it could have gotten the ./ added and
         // copy counter that could be added.
-        char new_file[file_length + 10];
+        char new_file[MAX_FILENAME_LENGTH];
 
         strcpy(new_file, root_dir);
         strcat(new_file, new_filename);
@@ -448,7 +453,7 @@ int main(int argc, char *argv[]){
         // Try to find a file that can be written by adding numbers behind the filename.
         while(!file_ok){
 
-            char copy_file[file_length + 10];
+            char copy_file[MAX_FILENAME_LENGTH];
             char counter_string[5];
             sprintf(counter_string, "%d", copy_counter);
 
