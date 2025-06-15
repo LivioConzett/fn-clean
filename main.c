@@ -20,8 +20,8 @@
 
 // struct for replacement
 typedef struct replacement_d{
-    char in[4];
-    char out[4];
+    char in[5];
+    char out[5];
     uint8_t len_out;
 } replacement_t;
 
@@ -105,14 +105,14 @@ replacement_t replacements[] = {
     {"Ö","OE",2},
     {"Ü","UE",2},
 
-    {"é","e",2},
-    {"è","e",2},
-    {"ẽ","e",2},
-    {"à","a",2},
-    {"É","E",2},
-    {"È","E",2},
-    {"Ẽ","E",2},
-    {"À","A",2},
+    {"é","e",1},
+    {"è","e",1},
+    {"ẽ","e",1},
+    {"à","a",1},
+    {"É","E",1},
+    {"È","E",1},
+    {"Ẽ","E",1},
+    {"À","A",1},
 
     {"@","-at-",4}
 };
@@ -391,7 +391,7 @@ int main(int argc, char *argv[]){
 
     // check if a file chooser was given
     if(file_list_counter == 0){
-        fprintf(stderr, "\nNo file chooser was given.\nTry -h for help.\n\n");
+        fprintf(stderr, "\nNo files were given.\nTry -h for help.\n\n");
         return 0;
     }
 
