@@ -16,8 +16,98 @@
 #include "main.h"
 
 
-static const char ALLOWED_CHARS[] = {"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789äöüÄÖÜ_-"};
+#define MAX_FILENAME_LENGTH 512
+
+static const char ALLOWED_CHARS[] = {"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+:"};
 static const uint8_t ALLOWED_CHARS_LENGTH = 70;
+
+// struct for replacement
+typedef struct replacement_d{
+    char in[4];
+    char out[4];
+    uint8_t len_out;
+} replacement_t;
+
+
+// list of replacements
+replacement_t replacements[] = {
+    {"a","a",1},
+    {"b","b",1},
+    {"c","c",1},
+    {"d","d",1},
+    {"e","e",1},
+    {"f","f",1},
+    {"g","g",1},
+    {"h","h",1},
+    {"i","i",1},
+    {"j","j",1},
+    {"k","k",1},
+    {"l","l",1},
+    {"m","m",1},
+    {"n","n",1},
+    {"o","o",1},
+    {"p","p",1},
+    {"q","q",1},
+    {"r","r",1},
+    {"s","s",1},
+    {"t","t",1},
+    {"u","u",1},
+    {"v","v",1},
+    {"w","w",1},
+    {"x","x",1},
+    {"y","y",1},
+    {"z","z",1},
+    
+    {"A","A",1},
+    {"B","B",1},
+    {"C","C",1},
+    {"D","D",1},
+    {"E","E",1},
+    {"F","F",1},
+    {"G","G",1},
+    {"H","H",1},
+    {"I","I",1},
+    {"J","J",1},
+    {"K","K",1},
+    {"L","L",1},
+    {"M","M",1},
+    {"N","N",1},
+    {"O","O",1},
+    {"P","P",1},
+    {"Q","Q",1},
+    {"R","R",1},
+    {"S","S",1},
+    {"T","T",1},
+    {"U","U",1},
+    {"V","V",1},
+    {"W","W",1},
+    {"X","X",1},
+    {"Y","Y",1},
+    {"Z","Z",1},
+
+    {"1","1",1},
+    {"2","2",1},
+    {"3","3",1},
+    {"4","4",1},
+    {"5","5",1},
+    {"6","6",1},
+    {"7","7",1},
+    {"8","8",1},
+    {"9","9",1},
+    {"0","0",1},
+
+    {"_","_",1},
+    {"-","-",1},
+    {"+","+",1},
+    {":",":",1},
+
+    {"ä","ae",2},
+    {"ö","oe",2}
+};
+
+uint16_t REPLACEMENTS_LENGTH = sizeof(replacements) / sizeof(replacement_t);
+
+
 
 /**
 * @brief Print out the help menu
@@ -32,9 +122,37 @@ static void print_help(){
     printf("\n");
 }
 
+/**
+ * @brief returns the length of a utf-8 char
+ * @param c character to get the length of
+ * @return amount of bytes the char has
+ */
+static int8_t get_char_length(char c){
+    
+    // 4-byte character (11110XXX)
+    if ((c & 0b11111000) == 0b11110000)
+        return 4;
+
+    // 3-byte character (1110XXXX)
+    if ((c & 0b11110000) == 0b11100000)
+        return 3;
+
+    // 2-byte character (110XXXXX)
+    if ((c & 0b11100000) == 0b11000000)
+        return 2;
+
+    // 1-byte ASCII character (0XXXXXXX)
+    if ((c & 0b10000000) == 0b00000000)
+        return 1;
+
+    // Probably a 10XXXXXXX continuation byte
+    return -1;
+
+}
+
 
 /**
- * @brief splits up the file path into directory, filename and extension
+ * @brief splits up the file path into directory, filename and extension. The extension is the text after the last dot.
  * @param length the length of the filepath
  * @param filepath the file path to get the directory from
  * @param directory the directory that is found
@@ -94,8 +212,6 @@ static void split_file_path(uint16_t length, char *filepath, char *directory, ch
     directory[directory_counter] = 0;
     extension[extension_counter] = 0;
 
-    // printf("%s - %s - %s\n", directory, filename, extension);
-
 }
 
 /**
@@ -114,27 +230,106 @@ static uint8_t char_is_safe(char c){
 
 
 /**
+ * @brief append str2 to the end of str1
+ * @param str1 string to appent to
+ * @param srt2 string to append
+ * @return amount of bytes appended.
+ */
+static uint16_t string_append(char str1[], char str2[]){
+
+    // find the end of the string
+    uint16_t start = 0;
+    
+    while(str1[start] != 0){
+        start++;
+    }
+
+    // append the string
+    uint16_t i = 0;
+
+    while(str2[i] != 0){
+        str1[start + i] = str2[i];
+        i++;
+    }
+
+    // cap off the str2
+    str1[start+i] = 0;
+
+    return i;
+}
+
+
+/**
+ * @brief compare two strings
+ * @param str1 first string
+ * @param str2 second string
+ * @return true if both strings are the same, false if not.
+ */
+static int8_t string_compare(char str1[], char str2[]){
+
+    int16_t i = 0;
+
+    while(str1[i] != 0){
+        
+        if(str1[i] != str2[i]){
+            // fprintf(stderr,"%s == %s  false\n", str1, str2);
+            return 0;
+        }
+
+        i++;
+    }
+
+    // fprintf(stderr,"%s == %s  true\n", str1, str2);
+    
+    return 1;
+}
+
+
+/**
  * @brief replace the unsafe chars of a string
+ * @param length length of the strings
  * @param in the filename to change the chars of
  * @param out the new string with the changed chars
  */
 static void replace_chars(uint16_t length, char *in, char *out){
+    
+    // fprintf(stderr,"%d %s %s\n", length, in, out);
 
-    for(uint16_t i = 0; i < length; i++){
+    uint16_t i_in = 0;
+    uint16_t i_out = 0;
+    char str[4];
+
+
+    while(in[i_in] != 0){
+
+        // get the amount of bytes in the utf-8 string
+        int8_t byte_len = get_char_length(in[i_in]);
+        int8_t j = 0;
+
+        // add the utf-8 char to a string
+        for(j = 0; j < byte_len; j++){
+            str[j] = in[i_in+j];
+        }
+        str[j] = 0;
+
+        // fprintf(stderr, "%s\n", str);
+
+
+        for(uint16_t r = 0; r < REPLACEMENTS_LENGTH; r++){
+
+            if(string_compare(str, replacements[r].in)){
+                string_append(out, replacements[r].out);
+                break;
+            }
+        }
         
-        // If the end was reached, cap off the string and return.
-        if(in[i] == 0){
-            out[i] = 0;
-            return;
-        }
-
-        if(char_is_safe(in[i])){
-            out[i] = in[i];
-        }
-        else{
-            out[i] = '_';
-        }
+        // advance the counter by the amount of bytes in the utf-8 char
+        if(byte_len > 0) i_in += byte_len-1;
+        
+        i_in++;
     }
+
+    // printf("%s\n", out);
 }
 
 
@@ -221,6 +416,7 @@ int main(int argc, char *argv[]){
         split_file_path(file_length, file, root_dir, filename, extension);
 
         char new_filename[file_length];
+        new_filename[0] = 0;
 
         replace_chars(file_length, filename, new_filename);
 
